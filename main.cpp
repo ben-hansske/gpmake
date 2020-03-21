@@ -11,22 +11,6 @@ extern "C" {
 #include <stdexcept>
 #include <sstream>
 
-int add(lua_State * L)
-{
-	int num_args = lua_gettop(L);
-	int i;
-	double sum = 0;
-
-
-	for (i = 1; i <= num_args; i++) {
-		sum += lua_tonumber(L, i);
-	}
-
-	lua_pushnumber(L, sum);	// need to push the result back on the stack
-
-	return lua_yield(L, 1); // 1 result
-}
-
 template <typename ...Args>
 [[nodiscard]] auto mk_string(Args && ... args) -> std::string {
 	auto os = std::ostringstream();
