@@ -34,26 +34,28 @@ template <typename ...Args>
 	return os.str();
 }
 
-	enum class dependency_type {
-		not_found,
-		changed,
-		satisfied,
-		broken
-	};
-	auto operator << (std::ostream& os, dependency_type val) -> std::ostream& {
-		switch (val) {
-			case dependency_type::not_found:
-				return os << "not_found";
-			case dependency_type::changed:
-				return os << "changed";
-			case dependency_type::satisfied:
-				return os << "satisfied";
-			case dependency_type::broken:
-				return os << "broken";
-			default:
-				throw std::runtime_error(mk_string("Unknown dependency_type: ", static_cast<int>(val)));
-		}
+enum class dependency_type {
+	not_found,
+	changed,
+	satisfied,
+	failed
+};
+auto operator << (std::ostream& os, dependency_type val) -> std::ostream& {
+	switch (val) {
+		case dependency_type::not_found:
+			return os << "not_found";
+		case dependency_type::changed:
+			return os << "changed";
+		case dependency_type::satisfied:
+			return os << "satisfied";
+		case dependency_type::failed:
+			return os << "failed";
+		default:
+			throw std::runtime_error(mk_string("Unknown dependency_type: ", static_cast<int>(val)));
 	}
+}
+
+
 struct DTable
 {
 	using dep_table_t = std::map<std::string, dependency_type>;
@@ -101,10 +103,10 @@ public:
 			insert_dependency(dep, dependency_type::changed);
 		}
 	}
-	[[nodiscard]] auto broken_dependencies(const dep_vec & deps) {
+	[[nodiscard]] auto failed_dependencies(const dep_vec & deps) {
 		auto lck = std::unique_lock(m_mtx);
 		for(auto & dep: deps) {
-			insert_dependency(dep, dependency_type::broken);
+			insert_dependency(dep, dependency_type::failed);
 		}
 	}
 
@@ -125,6 +127,9 @@ struct LBuildLib
 
 		return 0;
 	}
+	[[nodiscard]] auto changed_dependencies(lua_State * state) {
+		return 0;
+	}
 	[[nodiscard]] auto satisfy_dependencies(lua_State * state) {
 		return 0;
 	}
@@ -137,6 +142,7 @@ struct LBuildLib
 
 	[[nodiscard]] static int lua_require_dependencies(lua_State * state) { return self(state)->require_dependencies(state); }
 	[[nodiscard]] static int lua_satisfy_dependencies(lua_State * state) { return self(state)->satisfy_dependencies(state); }
+	[[nodiscard]] static int lua_changed_dependencies(lua_State * state) { return self(state)->changed_dependencies(state); }
 	[[nodiscard]] static int lua_failed_dependencies(lua_State * state) { return self(state)->failed_dependencies(state); }
 	[[nodiscard]] static int lua_spawn_task(lua_State * state) { return self(state)->spawn_task(state); }
 };
@@ -158,6 +164,8 @@ public:
 			{"require_dependencies", &LBuildLib::lua_require_dependencies},
 			{"satisfy_dependencies", &LBuildLib::lua_satisfy_dependencies},
 			{"failed_dependencies",  &LBuildLib::lua_failed_dependencies},
+			{"changed_dependencies", &LBuildLib::lua_changed_dependencies},
+			{"spawn_task", &LBuildLib::lua_spawn_task},
 			{nullptr, nullptr}
 		};
 
