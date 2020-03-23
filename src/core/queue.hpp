@@ -40,6 +40,14 @@ namespace detail {
 
 		std::aligned_storage_t<sizeof(T),alignof(T)> data;
 	};
+
+	/**
+	 *	@class ext_queue_capacity_bit
+	 */
+	struct ext_queue_capacity_bit {
+		size_t queue_is_empty : 1;
+		size_t capacity : sizeof(size_t)-1;
+	};
 }
 
 /**
@@ -53,17 +61,16 @@ template<typename T>
 class queue {
 	using it = detail::queue_helper_t<T>*;
 
-	// Requried for the first bit of capacity
-	static constexpr size_t capacity_helper = size_t(1) << (sizeof(size_t)*8-1);
 public:
 	/**
 	 *	@brief Allocate the queue with spezified count of elements.
 	 *
 	 *	@param size Count of allocated elements.
 	 */
-	queue(size_t capacity):
-		m_capacity(capacity + capacity_helper) {
+	queue(size_t capacity) {
 		m_data = new detail::queue_helper_t<T>[capacity]();
+		m_capacity.queue_is_empty = 1;
+		m_capacity.capacity = capacity;
 		m_beg = m_data;
 		m_end = m_data;
 	}
@@ -71,7 +78,7 @@ public:
 	 *	@brief Destructs the queued data.
 	 */
 	~queue() {
-		for(size_t i = 0; i < (m_capacity&~capacity_helper); i++) {
+		for(size_t i = 0; i < m_capacity.capacity; i++) {
 			reinterpret_cast<T*>(m_data+i)->~T();
 		}
 	}
@@ -83,8 +90,8 @@ public:
 	 */
 	template<typename... Targs>
 	void push(Targs&&... args) {
-		if(m_end == m_beg && (m_capacity & capacity_helper)) {
-			auto new_data = new detail::queue_helper_t<T>[(m_capacity&~capacity_helper)*2]();
+		if(m_end == m_beg && m_capacity.queue_is_empty) {
+			auto new_data = new detail::queue_helper_t<T>[m_capacity.capacity*2]();
 			// Copy queue begin
 			auto new_data_it = new_data;
 			auto old_data_it = m_data;
@@ -94,31 +101,32 @@ public:
 				++new_data_it;
 			}
 			// Copy queue end		
-			auto new_end_it = new_data_it + (m_capacity&~capacity_helper)*2;
-			auto old_end_it = m_data + (m_capacity&~capacity_helper);
+			auto new_end_it = new_data_it + m_capacity.capacity*2;
+			auto old_end_it = m_data + m_capacity.capacity;
 			do {
 				--new_end_it;
 				--old_end_it;
 				new_end_it->construct(std::move(old_end_it->ref()));
 			} while(old_end_it != m_beg);
 			
-			for(size_t i = 0; i < (m_capacity&~capacity_helper); i++) {
+			for(size_t i = 0; i < m_capacity.capacity; i++) {
 				reinterpret_cast<T*>(m_data+i)->~T();
 			}
 
 			m_data = new_data;
-			m_capacity = ((m_capacity&~capacity_helper)*2) + 1; //+ (m_capacity & capacity_helper);
+			m_capacity.capacity = 2*m_capacity.capacity + 1;
 
 			m_beg = new_end_it;
 			m_end = new_data_it;
 		}
 		m_end->construct(std::forward<Targs>(args)...);
 		++m_end;
-		if(m_end == m_data + (m_capacity&~capacity_helper)) {
+		if(m_end == m_data + m_capacity.capacity) {
 			m_end = m_data;
 		}
 		// Required to distinguish an empty queue from a full queue (m_beg == m_end)
-		m_capacity = (m_capacity&~capacity_helper);
+		m_capacity.capacity = m_capacity.capacity;
+		m_capacity.queue_is_empty = 0;
 	}
 
 	/**
@@ -132,12 +140,12 @@ public:
 		}
 		auto res = std::move(m_beg->ref());
 		++m_beg;
-		if(m_beg == m_data+(m_capacity&~capacity_helper)) {
+		if(m_beg == m_data+m_capacity.capacity) {
 			m_beg = m_data;
 		}
 		if(m_end == m_beg) {
 			// Required to distinguish an empty queue from a full queue (m_beg == m_end)
-			m_capacity = m_capacity | capacity_helper;
+			m_capacity.queue_is_empty = 1;
 		}
 		return res;
 	}
@@ -146,14 +154,14 @@ public:
 	 *	@brief Returns true if queue contains no element.
 	 */
 	bool is_empty() {
-		return (m_capacity & capacity_helper);
+		return m_capacity.queue_is_empty;
 	}
 
 private:
 	it								m_beg,m_end;
 	it					 			m_data;
 	// if first bit is 1 then the queue is empty
-	size_t							m_capacity;
+	detail::ext_queue_capacity_bit	m_capacity;
 	std::mutex						m_mtx;
 
 };
