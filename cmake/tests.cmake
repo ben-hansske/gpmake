@@ -27,5 +27,8 @@ function(create_test)
     target_compile_definitions("${CT_NAME}" PRIVATE
         ${CT_DEFINITIONS}
         )
+	target_include_directories("${CT_NAME}" PRIVATE
+		${CMAKE_SOURCE_DIR}/src
+		)
     add_test("${CT_NAME}" "${CT_NAME}")
 endfunction()

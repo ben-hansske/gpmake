@@ -23,7 +23,7 @@ if(USE_CONAN)
 		CONAN_PKG::lua
 		)
 else()
-	find_package(Lua REQUIRED)
+	find_package(Lua 5.3 REQUIRED)
 
 	target_link_libraries(__project_dependencies__ INTERFACE
 		${LUA_LIBRARIES}
