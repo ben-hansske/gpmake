@@ -7,13 +7,14 @@
  *  @brief Implementation of pointer based ring queue
  *
  *  changes:
- *  23.03.2020: 
+ *  23.03.2020:
  *  	- Initial ptr_queue setup containing push,pop and is_empty.
  */
 
-#include<thread>
-#include<mutex>
-#include<limits>
+#include <thread>
+#include <mutex>
+#include <limits>
+#include <utility>
 
 namespace detail {
 	/**
@@ -46,7 +47,7 @@ namespace detail {
 	 */
 	struct ext_queue_capacity_bit {
 		size_t queue_is_empty : 1;
-		size_t capacity : sizeof(size_t)-1;
+		size_t capacity : 8*sizeof(size_t)-1;
 	};
 }
 
@@ -78,9 +79,22 @@ public:
 	 *	@brief Destructs the queued data.
 	 */
 	~queue() {
-		for(size_t i = 0; i < m_capacity.capacity; i++) {
-			reinterpret_cast<T*>(m_data+i)->~T();
+		if(is_empty()) {
 		}
+		else if(m_beg < m_end) {
+			for(; m_beg != m_end; ++m_beg) {
+				m_beg->destruct();
+			}
+		}
+		else {
+			for(auto it = m_data; it != m_end; ++it) {
+				it->destruct();
+			}
+			for(auto it = m_beg; it != m_data + capacity(); ++it) {
+				it->destruct();
+			}
+		}
+		delete[] m_data;
 	}
 
 	/**
@@ -90,42 +104,40 @@ public:
 	 */
 	template<typename... Targs>
 	void push(Targs&&... args) {
-		if(m_end == m_beg && m_capacity.queue_is_empty) {
-			auto new_data = new detail::queue_helper_t<T>[m_capacity.capacity*2]();
+		if(m_end == m_beg && !is_empty()) {
+			auto new_cap = capacity() * 2 + 1;
+			auto new_data = new detail::queue_helper_t<T>[new_cap]();
 			// Copy queue begin
 			auto new_data_it = new_data;
 			auto old_data_it = m_data;
 			while(old_data_it != m_end) {
 				new_data_it->construct(std::move(old_data_it->ref()));
+				old_data_it->destruct();
 				++old_data_it;
 				++new_data_it;
 			}
-			// Copy queue end		
-			auto new_end_it = new_data_it + m_capacity.capacity*2;
-			auto old_end_it = m_data + m_capacity.capacity;
+			// Copy queue end
+			auto new_end_it = new_data + new_cap;
+			auto old_end_it = m_data + capacity();
 			do {
 				--new_end_it;
 				--old_end_it;
 				new_end_it->construct(std::move(old_end_it->ref()));
+				old_end_it->destruct();
 			} while(old_end_it != m_beg);
-			
-			for(size_t i = 0; i < m_capacity.capacity; i++) {
-				reinterpret_cast<T*>(m_data+i)->~T();
-			}
 
 			m_data = new_data;
-			m_capacity.capacity = 2*m_capacity.capacity + 1;
+			m_capacity.capacity = new_cap;
 
 			m_beg = new_end_it;
 			m_end = new_data_it;
 		}
 		m_end->construct(std::forward<Targs>(args)...);
 		++m_end;
-		if(m_end == m_data + m_capacity.capacity) {
+		if(m_end == m_data + capacity()) {
 			m_end = m_data;
 		}
 		// Required to distinguish an empty queue from a full queue (m_beg == m_end)
-		m_capacity.capacity = m_capacity.capacity;
 		m_capacity.queue_is_empty = 0;
 	}
 
@@ -139,8 +151,9 @@ public:
 			throw std::runtime_error("Can not pop element from an empty queue");
 		}
 		auto res = std::move(m_beg->ref());
+		m_beg->destruct();
 		++m_beg;
-		if(m_beg == m_data+m_capacity.capacity) {
+		if(m_beg == m_data + capacity()) {
 			m_beg = m_data;
 		}
 		if(m_end == m_beg) {
@@ -153,8 +166,11 @@ public:
 	/**
 	 *	@brief Returns true if queue contains no element.
 	 */
-	bool is_empty() {
+	[[nodiscard]] auto is_empty() -> bool{
 		return m_capacity.queue_is_empty;
+	}
+	[[nodiscard]] auto capacity() -> std::size_t {
+		return m_capacity.capacity;
 	}
 
 private:
