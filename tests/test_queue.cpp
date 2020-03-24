@@ -5,14 +5,15 @@
 #include <string>
 #include <sstream>
 
-unsigned glob_counter = 0;
 struct element_t{
+	static unsigned counter;
 	element_t() {
-		dummy_data = glob_counter;
-		++glob_counter;
+		dummy_data = counter;
+		++counter;
 	}
-	int dummy_data;
+	unsigned dummy_data;
 };
+unsigned element_t::counter = 0;
 
 struct test_val{
 	static int counter;

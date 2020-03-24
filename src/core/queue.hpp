@@ -66,7 +66,7 @@ public:
 	/**
 	 *	@brief Allocate the queue with spezified count of elements.
 	 *
-	 *	@param size Count of allocated elements.
+	 *	@param capacity Number of allocated elements.
 	 */
 	queue(size_t capacity) {
 		m_data = new detail::queue_helper_t<T>[capacity]();

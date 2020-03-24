@@ -7,6 +7,7 @@ include(cmake/config.cmake)
 setup_config(cxx_std_17)
 
 include(cmake/sanitizer.cmake)
+setup_sanitizer()
 
 add_library(__project_dependencies__ INTERFACE)
 add_library(project::dependencies ALIAS __project_dependencies__)
