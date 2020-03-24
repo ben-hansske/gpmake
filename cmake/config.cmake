@@ -13,8 +13,11 @@ function(setup_config standard)
     # Compiler warnings
     if(CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # enable Clang-warnings
         set(CLANG_WARNINGS
-            -Wall
-            -Wextra
+			-Weverything
+			-Wno-c++98-compat
+			-Wno-c++98-compat-pedantic
+			-Wno-missing-prototypes
+			-Wno-ctad-maybe-unsupported
             )
         target_compile_options(__project_config__ INTERFACE
             ${CLANG_WARNINGS}
