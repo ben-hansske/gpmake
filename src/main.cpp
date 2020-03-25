@@ -43,7 +43,7 @@ auto operator << (std::ostream& os, dependency_type val) -> std::ostream& {
 struct DTable
 {
 	using dep_table_t = std::map<std::string, dependency_type>;
-	using dep_it_t = dep_table_t::iterator;
+	using dep_it_t = dep_table_t::const_iterator;
 	dep_table_t m_deps;
 	using dep_vec = std::vector<std::string>;
 private:
@@ -62,6 +62,9 @@ private:
 
 
 public:
+	auto get_shared_lock() {
+		return std::shared_lock(m_mtx);
+	}
 
 	std::shared_mutex m_mtx;
 	[[nodiscard]] auto require_dependencies(const std::vector<std::string>& deps) {
@@ -96,8 +99,49 @@ public:
 
 };
 
+class DTableLua
+{
+	std::map<std::string, std::unique_ptr<DTable>> m_tables;
+	std::shared_mutex m_mtx;
+	static int create(lua_State * state) {
+		auto num_args = lua_gettop(state);
+		if(num_args != 2) {
+			return luaL_error(state, "Got %d arguments, expected 2 (class, x)", num_args);
+		}
+		luaL_checktype(state, 1, LUA_TTABLE);
+		lua_newtable(state);
+		lua_pushvalue(state, 1);
+		lua_setmetatable(state, -2);
+
+		lua_pushvalue(state, 1);
+		lua_setfield(state, 1, "__index");
+
+		auto ptrptr = reinterpret_cast<DTable**>(lua_newuserdata(state, sizeof(DTable*)));
+		auto str = std::string(luaL_checkstring(state, 2));
+
+		auto ptr = std::unique_ptr<DTable>();
+		*ptrptr = ptr.get();
+
+		luaL_getmetatable(state, "gpmake.dtable");
+		lua_setmetatable(state, -2);
+		lua_setfield(state, -2, "__self");
+
+		return 1;
+	}
+	int dtable_new(lua_State * state) {
+		//return DTableLua::create(state
+
+	}
+};
+
 struct LBuildLib
 {
+
+	[[nodiscard]] auto get_table(lua_State * state) {
+	}
+
+
+
 	[[nodiscard]] static auto self(lua_State * state) {
 		return reinterpret_cast<LBuildLib*>(lua_touserdata(state, lua_upvalueindex(1)));
 	}
@@ -143,7 +187,7 @@ public:
 		m_state(luaL_newstate()),
 		m_thread(lua_newthread(m_state))
 	{
-		luaL_openlibs(m_state);
+		//luaL_openlibs(m_state);
 		const luaL_Reg reg[]{
 			{"require_dependencies", &LBuildLib::lua_require_dependencies},
 			{"satisfy_dependencies", &LBuildLib::lua_satisfy_dependencies},
@@ -185,21 +229,25 @@ public:
 
 int main(int argc, char**argv)
 {
-	auto task = LTask(R"lua(
-		lbuild.require_dependencies("test");
+	for(int i = 0; i < 100000; ++i) {
+
+		auto task = LTask(R"lua(
+			lbuild.require_dependencies("test");
 		)lua");
 
-	std::cout << &task <<std::endl;
-	auto task_res = task.resume();
-	std::cout << task_res << std::endl;
-	if(task_res == LUA_OK) {
-		std::cout << "finished!\n";
+		std::cout << &task <<std::endl;
+		auto task_res = task.resume();
+		std::cout << task_res << std::endl;
+		if(task_res == LUA_OK) {
+			std::cout << "finished!\n";
+		}
+		else if (task_res == LUA_YIELD) {
+			std::cout << "yielded!\n";
+		}
+		else {
+			std::cout << "ERROR: " << task.thread_error();// << '\n' << task.thread_error();
+		}
 	}
-	else if (task_res == LUA_YIELD) {
-		std::cout << "yielded!\n";
-	}
-	else {
-		std::cout << "ERROR: " << task.thread_error();// << '\n' << task.thread_error();
-	}
+	std::cin.get();
 
 };
