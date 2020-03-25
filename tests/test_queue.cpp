@@ -5,7 +5,7 @@
 #include <string>
 #include <sstream>
 
-unsigned glob_counter = 0;
+static int glob_counter = 0;
 struct element_t{
 	element_t() {
 		dummy_data = glob_counter;

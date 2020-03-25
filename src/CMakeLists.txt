@@ -7,3 +7,7 @@ create_exe(
 	LIBS
 		project::dependencies
 	)
+
+create_exe(NAME gpmake2
+	SOURCES "main2.cpp"
+	)
