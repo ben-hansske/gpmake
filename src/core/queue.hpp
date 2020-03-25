@@ -125,6 +125,8 @@ public:
 				new_end_it->construct(std::move(old_end_it->ref()));
 				old_end_it->destruct();
 			} while(old_end_it != m_beg);
+			
+			delete[] m_data;
 
 			m_data = new_data;
 			m_capacity.capacity = new_cap;

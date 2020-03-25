@@ -6,4 +6,7 @@ create_test(
 		"test_queue.cpp"
 	LIBS
 		project::dependencies
+	SANITIZE_MEMORY
+	# SANITIZE_THREAD
+	SANITIZE_UNDEFINED
 	)
