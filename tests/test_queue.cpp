@@ -5,6 +5,10 @@
 #include <string>
 #include <sstream>
 
+<<<<<<< HEAD
+=======
+static int glob_counter = 0;
+>>>>>>> cpp
 struct element_t{
 	static unsigned counter;
 	element_t() {
