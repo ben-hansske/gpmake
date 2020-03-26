@@ -69,68 +69,66 @@ function(create_test)
 		${CMAKE_SOURCE_DIR}/src
 		)
 
-	if(NOT CT_SANITIZE_MEMORY AND NOT CT_SANITIZE_THREAD AND NOT CT_SANITIZE_UNDEFINED)
-		add_executable("${CT_NAME}"
-			${CT_SOURCES}
-			)
-		if(TARGET project::sanitizer)
-			target_link_libraries("${CT_NAME}" PUBLIC
-				project::sanitizer
+	if(CT_SANITIZE_MEMORY)
+		foreach(SANITIZER_GROUP IN LISTS SANITIZER_LIST_MEMORY)
+			string(REPLACE "," "_" NAME_SUFFIX ${SANITIZER_GROUP})
+			set(EXE_NAME "${CT_NAME}_${NAME_SUFFIX}")
+			add_executable("${EXE_NAME}"
+				"${CT_SOURCES}"
 				)
-		endif()
-		target_link_libraries("${CT_NAME}" PUBLIC "${CT_NAME}_LIB")
-		add_test("${CT_NAME}" "${CT_NAME}")
-	else()
-		if(CT_SANITIZE_MEMORY)
-			foreach(SANITIZER_GROUP IN LISTS SANITIZER_LIST_MEMORY)
-				string(REPLACE "," "_" NAME_SUFFIX ${SANITIZER_GROUP})
-				set(EXE_NAME "${CT_NAME}_${NAME_SUFFIX}")
-				add_executable("${EXE_NAME}"
-					"${CT_SOURCES}"
-					)
-				target_link_libraries("${EXE_NAME}" PUBLIC
-					"${CT_NAME}_LIB"
-					"-fsanitize=${SANITIZER_GROUP}"
-					)
-				target_compile_options("${EXE_NAME}" PUBLIC
-					"-fsanitize=${SANITIZER_GROUP}"
-					)
-				add_test("${EXE_NAME}" "${EXE_NAME}")
-			endforeach()
-		endif()
-		if(CT_SANITIZE_THREAD)
-			foreach(SANITIZER_GROUP IN LISTS SANITIZER_LIST_THREAD)
-				string(REPLACE "," "_" NAME_SUFFIX ${SANITIZER_GROUP})
-				set(EXE_NAME "${CT_NAME}_${NAME_SUFFIX}")
-				add_executable("${EXE_NAME}"
-					"${CT_SOURCES}"
-					)
-				target_link_libraries("${EXE_NAME}" PUBLIC
-					"${CT_NAME}_LIB"
-					"-fsanitize=${SANITIZER_GROUP}"
-					)
-				target_compile_options("${EXE_NAME}" PUBLIC
-					"-fsanitize=${SANITIZER_GROUP}"
-					)
-				add_test("${EXE_NAME}" "${EXE_NAME}")
-			endforeach()
-		endif()
-		if(CT_SANITIZE_UNDEFINED)
-			foreach(SANITIZER_GROUP IN LISTS SANITIZER_LIST_UNDEFINED)
-				string(REPLACE "," "_" NAME_SUFFIX ${SANITIZER_GROUP})
-				set(EXE_NAME "${CT_NAME}_${NAME_SUFFIX}")
-				add_executable("${EXE_NAME}"
-					"${CT_SOURCES}"
-					)
-				target_link_libraries("${EXE_NAME}" PUBLIC
-					"${CT_NAME}_LIB"
-					"-fsanitize=${SANITIZER_GROUP}"
-					)
-				target_compile_options("${EXE_NAME}" PUBLIC
-					"-fsanitize=${SANITIZER_GROUP}"
-					)
-				add_test("${EXE_NAME}" "${EXE_NAME}")
-			endforeach()
-		endif()
+			target_link_libraries("${EXE_NAME}" PUBLIC
+				"${CT_NAME}_LIB"
+				"-fsanitize=${SANITIZER_GROUP}"
+				)
+			target_compile_options("${EXE_NAME}" PUBLIC
+				"-fsanitize=${SANITIZER_GROUP}"
+				)
+			add_test("${EXE_NAME}" "${EXE_NAME}")
+		endforeach()
 	endif()
+	if(CT_SANITIZE_THREAD)
+		foreach(SANITIZER_GROUP IN LISTS SANITIZER_LIST_THREAD)
+			string(REPLACE "," "_" NAME_SUFFIX ${SANITIZER_GROUP})
+			set(EXE_NAME "${CT_NAME}_${NAME_SUFFIX}")
+			add_executable("${EXE_NAME}"
+				"${CT_SOURCES}"
+				)
+			target_link_libraries("${EXE_NAME}" PUBLIC
+				"${CT_NAME}_LIB"
+				"-fsanitize=${SANITIZER_GROUP}"
+				)
+			target_compile_options("${EXE_NAME}" PUBLIC
+				"-fsanitize=${SANITIZER_GROUP}"
+				)
+			add_test("${EXE_NAME}" "${EXE_NAME}")
+		endforeach()
+	endif()
+	if(CT_SANITIZE_UNDEFINED)
+		foreach(SANITIZER_GROUP IN LISTS SANITIZER_LIST_UNDEFINED)
+			string(REPLACE "," "_" NAME_SUFFIX ${SANITIZER_GROUP})
+			set(EXE_NAME "${CT_NAME}_${NAME_SUFFIX}")
+			add_executable("${EXE_NAME}"
+				"${CT_SOURCES}"
+				)
+			target_link_libraries("${EXE_NAME}" PUBLIC
+				"${CT_NAME}_LIB"
+				"-fsanitize=${SANITIZER_GROUP}"
+				)
+			target_compile_options("${EXE_NAME}" PUBLIC
+				"-fsanitize=${SANITIZER_GROUP}"
+				)
+			add_test("${EXE_NAME}" "${EXE_NAME}")
+		endforeach()
+	endif()
+
+	add_executable("${CT_NAME}"
+		${CT_SOURCES}
+		)
+	if(TARGET project::sanitizer)
+		target_link_libraries("${CT_NAME}" PUBLIC
+			project::sanitizer
+			)
+	endif()
+	target_link_libraries("${CT_NAME}" PUBLIC "${CT_NAME}_LIB")
+	add_test("${CT_NAME}" "${CT_NAME}")
 endfunction()
