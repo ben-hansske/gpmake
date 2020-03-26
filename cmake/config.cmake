@@ -9,6 +9,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_library(__project_config__ INTERFACE)
 add_library(project::config ALIAS __project_config__)
 
+add_library(__project_threading__ INTERFACE)
+add_library(project::threading ALIAS __project_threading__)
+target_link_libraries(__project_threading__ INTERFACE pthread)
+
 function(setup_config standard)
     # Compiler warnings
     if(CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang") # enable Clang-warnings
