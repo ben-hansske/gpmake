@@ -8,6 +8,17 @@ create_exe(
 		project::dependencies
 	)
 
-create_exe(NAME gpmake2
+create_header_lib(
+	NAME gpmake_cpp_lib
+	DIRS "${CMAKE_CURRENT_SOURCE_DIR}"
+	SOURCES "core/queue.hpp"
+)
+
+
+
+create_exe(
+	NAME gpmake2
 	SOURCES "main2.cpp"
+	LIBS gpmake_cpp_lib
+		project::threading
 	)
